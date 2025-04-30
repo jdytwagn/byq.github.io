@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lucky 球体动画</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            min-height: 100vh;
+        }
+        .ball {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background-image: url('ball.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            pointer-events: none;
+        }
+        #meteor-canvas {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+            display: block;
+        }
+        .subtitle {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #3cf0ff;
+            font-size: 100px;
+            font-weight: bold;
+            text-shadow: 0 0 40px #3cf0ff, 0 0 80px #fff, 0 0 120px #1a8cff;
+            z-index: 1001;
+            letter-spacing: 18px;
+            opacity: 0;
+            transition: opacity 0.5s, transform 0.5s, color 0.5s;
+            font-family: 'Segoe UI', 'Arial', sans-serif;
+            user-select: none;
+            pointer-events: none;
+            animation: none;
+        }
+        .subtitle.show {
+            opacity: 1;
+            animation: magicText 1.2s cubic-bezier(.68,-0.55,.27,1.55);
+        }
+        @keyframes magicText {
+            0% { transform: translate(-50%, -50%) scale(0.5) rotate(-10deg); color: #fff; text-shadow: 0 0 0 #fff; }
+            60% { transform: translate(-50%, -50%) scale(1.15) rotate(8deg); color: #1a8cff; text-shadow: 0 0 80px #3cf0ff, 0 0 120px #fff; }
+            100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); color: #3cf0ff; text-shadow: 0 0 40px #3cf0ff, 0 0 80px #fff, 0 0 120px #1a8cff; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="meteor-canvas"></canvas>
+    <div class="subtitle" id="subtitle"></div>
+    <script>
+        // --- 滿屏右上到左下流星（30度）+星空 ---
+        const meteorCanvas = document.getElementById('meteor-canvas');
+        const meteorCtx = meteorCanvas.getContext('2d');
+        let meteors = [];
+        const meteorCount = 60;
+        // 統一角度（30度，右上到左下）
+        const angle = Math.PI / 6; // 30度
+        // 星點
+        let stars = [];
+        const starCount = 120;
+        function randomStar() {
+            return {
+                x: Math.random() * window.innerWidth,
+                y: Math.random() * window.innerHeight,
+                r: Math.random() * 1.2 + 0.3,
+                alpha: 0.5 + Math.random() * 0.5
+            };
+        }
+        function drawStars() {
+            for (let s of stars) {
+                meteorCtx.save();
+                meteorCtx.globalAlpha = s.alpha;
+                meteorCtx.beginPath();
+                meteorCtx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                meteorCtx.fillStyle = '#fff';
+                meteorCtx.shadowColor = '#fff';
+                meteorCtx.shadowBlur = 6;
+                meteorCtx.fill();
+                meteorCtx.restore();
+            }
+        }
+        function randomMeteor() {
+            // 起點：右側或頂部
+            let x, y;
+            if (Math.random() < 0.5) {
+                x = window.innerWidth + 80;
+                y = Math.random() * window.innerHeight * 0.8;
+            } else {
+                x = Math.random() * window.innerWidth * 0.8;
+                y = -80;
+            }
+            const speed = 10 + Math.random() * 8;
+            const len = 220 + Math.random() * 120;
+            const color = Math.random() > 0.5 ? '#3cf0ff' : '#fff';
+            return {
+                x, y,
+                vx: -Math.cos(angle) * speed, // 右上到左下
+                vy: Math.sin(angle) * speed,
+                len,
+                color,
+                alpha: 0.7 + Math.random() * 0.3,
+                width: 2.5 + Math.random() * 2.5
+            };
+        }
+        function drawMeteor(m) {
+            meteorCtx.save();
+            meteorCtx.globalAlpha = m.alpha;
+            meteorCtx.strokeStyle = m.color;
+            meteorCtx.shadowColor = m.color;
+            meteorCtx.shadowBlur = 32;
+            meteorCtx.lineWidth = m.width;
+            meteorCtx.beginPath();
+            meteorCtx.moveTo(m.x, m.y);
+            meteorCtx.lineTo(m.x - m.vx * m.len / 20, m.y - m.vy * m.len / 20);
+            meteorCtx.stroke();
+            // 拖尾粒子
+            for(let i=0;i<10;i++){
+                let t = i/10;
+                meteorCtx.globalAlpha = m.alpha * (1-t) * 0.5;
+                meteorCtx.beginPath();
+                meteorCtx.arc(m.x - m.vx * m.len/20 * t, m.y - m.vy * m.len/20 * t, m.width*0.7*(1-t), 0, Math.PI*2);
+                meteorCtx.fillStyle = m.color;
+                meteorCtx.shadowBlur = 16;
+                meteorCtx.fill();
+            }
+            meteorCtx.restore();
+        }
+        function animateMeteor() {
+            meteorCtx.clearRect(0, 0, meteorCanvas.width, meteorCanvas.height);
+            drawStars();
+            for (let m of meteors) {
+                m.x += m.vx;
+                m.y += m.vy;
+                drawMeteor(m);
+                if (m.x < -100 || m.y > window.innerHeight + 100) {
+                    Object.assign(m, randomMeteor());
+                }
+            }
+            requestAnimationFrame(animateMeteor);
+        }
+        function resizeMeteor() {
+            meteorCanvas.width = window.innerWidth;
+            meteorCanvas.height = window.innerHeight;
+            stars = Array.from({length: starCount}, randomStar);
+        }
+        window.addEventListener('resize', resizeMeteor);
+        resizeMeteor();
+        meteors = Array.from({length: meteorCount}, randomMeteor);
+        animateMeteor();
+
+        // --- 小球掉落動畫 ---
+        function createBall() {
+            const ball = document.createElement('div');
+            ball.className = 'ball';
+            ball.style.left = Math.random() * window.innerWidth + 'px';
+            ball.style.top = '-50px';
+            document.body.appendChild(ball);
+
+            let posY = -50;
+            let speed = 2.5 + Math.random() * 2.5;
+            let rotation = Math.random() * 360;
+
+            function animate() {
+                posY += speed;
+                rotation += 2;
+                ball.style.top = posY + 'px';
+                ball.style.transform = `rotate(${rotation}deg)`;
+
+                if (posY < window.innerHeight) {
+                    requestAnimationFrame(animate);
+                } else {
+                    ball.remove();
+                }
+            }
+
+            animate();
+        }
+        setInterval(createBall, 250);
+        for (let i = 0; i < 20; i++) {
+            setTimeout(createBall, i * 80);
+        }
+
+        // --- 魔幻動態字幕顯示（正中央，藍色）---
+        const subtitles = ['3', '2', '1', 'Lucky', '五一快乐'];
+        const subtitleDiv = document.getElementById('subtitle');
+        let subtitleIndex = 0;
+        function showSubtitle(idx) {
+            subtitleDiv.classList.remove('show');
+            setTimeout(() => {
+                subtitleDiv.textContent = subtitles[idx];
+                subtitleDiv.classList.add('show');
+            }, 100);
+        }
+        function nextSubtitle() {
+            showSubtitle(subtitleIndex);
+            let delay = 900;
+            if(subtitleIndex === subtitles.length-1) delay = 2200;
+            setTimeout(() => {
+                subtitleDiv.classList.remove('show');
+                subtitleIndex++;
+                if(subtitleIndex < subtitles.length) {
+                    setTimeout(nextSubtitle, 400);
+                }
+            }, delay);
+        }
+        nextSubtitle();
+    </script>
+</body>
+</html> 
