@@ -1,4 +1,4 @@
-![image](https://github.com/user-attachments/assets/da81a282-2765-45e5-9680-563988a23ce1)# Lucky 球体动画
+# Lucky 球体动画
 
 这是一个球体（八音窍）掉落的网页播放。
 可以通过网址访问： https://jdytwagn.github.io/byq.github.io/
@@ -28,6 +28,8 @@
 - 无限循环播放
 
 ## 效果展示
-![image](https://github.com/user-attachments/assets/3538f23b-926e-42f5-9d83-66014251542f)
+![image](https://github.com/user-attachments/assets/60da6af3-9df2-4197-964d-5fea6c5bd260)
+
+
 
 
